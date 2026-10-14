@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Inbound Dock → Injection Floor</title>
+  <style>
+    :root {
+      --bg: #141414;
+      --panel: #181818;
+      --text: rgba(228, 228, 228, 0.92);
+      --muted: rgba(228, 228, 228, 0.55);
+      --faint: rgba(228, 228, 228, 0.35);
+      --stroke: rgba(228, 228, 228, 0.12);
+      --stroke-strong: rgba(228, 228, 228, 0.2);
+      --fill: rgba(228, 228, 228, 0.07);
+      --fill-strong: rgba(228, 228, 228, 0.12);
+      --accent: #599ce7;
+      --warn: #d4a15a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+    .wrap {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 20px 16px 40px;
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: 650;
+      margin: 0 0 6px;
+      letter-spacing: -0.02em;
+    }
+    .lede { color: var(--muted); margin: 0 0 16px; font-size: 14px; max-width: 70ch; }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      padding: 12px;
+      background: var(--panel);
+      border: 1px solid var(--stroke);
+      border-radius: 10px;
+      margin-bottom: 14px;
+    }
+    select, button {
+      font: inherit;
+      border-radius: 8px;
+      border: 1px solid var(--stroke-strong);
+      background: var(--fill);
+      color: var(--text);
+      padding: 8px 12px;
+    }
+    select { min-width: 240px; flex: 1; }
+    button { cursor: pointer; }
+    button.primary {
+      background: var(--accent);
+      color: #191c22;
+      border-color: transparent;
+      font-weight: 600;
+    }
+    button:hover { filter: brightness(1.08); }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      border: 1px solid var(--stroke-strong);
+      color: var(--muted);
+      background: var(--fill);
+    }
+    .pill.info { color: #9ec5f0; border-color: rgba(89, 156, 231, 0.35); }
+    .pill.warn { color: #e2c08d; border-color: rgba(212, 161, 90, 0.4); }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.7fr) minmax(240px, 0.85fr);
+      gap: 14px;
+      align-items: start;
+    }
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+    .floor-shell {
+      border: 1px solid var(--stroke-strong);
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--panel);
+    }
+    .floor-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--stroke);
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .floor-head .spacer { flex: 1; }
+    svg { display: block; width: 100%; background: #181818; }
+    .side { display: flex; flex-direction: column; gap: 12px; }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--stroke);
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .card h2 {
+      margin: 0 0 8px;
+      font-size: 13px;
+      font-weight: 650;
+    }
+    .insight-title { font-weight: 650; margin-bottom: 6px; }
+    .insight-body { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+    .steps { display: flex; flex-direction: column; gap: 6px; }
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .step.current { color: var(--text); font-weight: 600; }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 99px;
+      background: var(--stroke-strong);
+      flex-shrink: 0;
+    }
+    .step.current .dot {
+      background: var(--accent);
+      animation: pulseCore 1.1s ease-in-out infinite;
+    }
+    .step.done .dot { background: var(--faint); }
+    .callout {
+      border: 1px solid var(--stroke-strong);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 13px;
+      color: var(--muted);
+      background: var(--fill);
+    }
+    .callout strong { color: var(--text); display: block; margin-bottom: 4px; }
+    .share-note {
+      margin-top: 16px;
+      font-size: 12px;
+      color: var(--faint);
+    }
+    @keyframes pulseCore {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.45; }
+    }
+    @keyframes pulseRing {
+      0% { opacity: 0.28; transform: scale(0.7); }
+      70% { opacity: 0; transform: scale(1.55); }
+      100% { opacity: 0; transform: scale(1.55); }
+    }
+    .pulse-core { animation: pulseCore 1.1s ease-in-out infinite; }
+    .pulse-ring {
+      animation: pulseRing 1.4s ease-out infinite;
+      transform-box: fill-box;
+      transform-origin: center;
+    }
+    .flow-dash {
+      stroke-dasharray: 6 8;
+      animation: dash 1.2s linear infinite;
+    }
+    @keyframes dash { to { stroke-dashoffset: -28; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Inbound dock → injection floor</h1>
+    <p class="lede">
+      Top-down warehouse overview. Pulsing dots show the path from dock → packslip →
+      run PO / IR in IB dock management → lane → L1/L4 printers → 1-piece flow →
+      injection. Middle mile skips IB dock management, printers, and 1PF.
+    </p>
+
+    <div class="toolbar">
+      <select id="palletSelect" aria-label="Demo flow"></select>
+      <button class="primary" id="playBtn" type="button">Play floor path</button>
+      <button id="resetBtn" type="button">Reset</button>
+      <span id="pills"></span>
+    </div>
+
+    <div class="layout">
+      <div class="floor-shell">
+        <div class="floor-head">
+          <span>Warehouse floor · north ↑</span>
+          <span class="spacer"></span>
+          <span class="pill">Top-down overview</span>
+        </div>
+        <div id="svgHost"></div>
+      </div>
+
+      <div class="side">
+        <div class="card">
+          <h2>Live insight</h2>
+          <div class="insight-title" id="insightTitle"></div>
+          <div class="insight-body" id="insightBody"></div>
+          <div class="steps" id="steps"></div>
+        </div>
+        <div class="callout" id="callout"></div>
+        <div class="card">
+          <h2>Floor legend</h2>
+          <p style="margin:0;font-size:12px;color:var(--muted)">
+            Pulsing token = active pallet · Dashed line = path of travel<br />
+            Below induction aisle: compliant = apply 1PF IBL + induct carton ·
+            non-compliant = apply IBL, get picl, apply on 1PF · then injection
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <p class="share-note">
+      Shareable offline tool — open this file in any browser, or host the
+      <code>share/</code> folder on any static site for a link.
+    </p>
+  </div>
+
+  <script>
+    const W = 720, H = 780;
+    const FLOOR = {
+      door1: { x: 40, y: 28, w: 120, h: 44, label: "D1" },
+      door2: { x: 170, y: 28, w: 120, h: 44, label: "D2" },
+      door3: { x: 300, y: 28, w: 120, h: 44, label: "D3" },
+      door4: { x: 430, y: 28, w: 120, h: 44, label: "D4" },
+      door5: { x: 560, y: 28, w: 120, h: 44, label: "D5" },
+      desk: { x: 80, y: 140, w: 200, h: 72, label: "Packslip upload", sub: "Confirm PO / IR · apply ISL labels" },
+      scan: { x: 400, y: 140, w: 240, h: 72, label: "Run PO / IR", sub: "IB dock management tool" },
+      "lane-avt-c": { x: 28, y: 280, w: 124, h: 88, label: "L1 AVT", sub: "Compliant" },
+      "lane-avt-nc": { x: 162, y: 280, w: 124, h: 88, label: "L2 AVT NC", sub: "+ picl path" },
+      "lane-prep-c": { x: 296, y: 280, w: 124, h: 88, label: "L3 Prep", sub: "Compliant" },
+      "lane-prep-nc": { x: 430, y: 280, w: 124, h: 88, label: "L4 Prep NC", sub: "+ picl path" },
+      "lane-mm": { x: 564, y: 280, w: 128, h: 88, label: "L5 MM", sub: "No scan" },
+      "print-l1": { x: 28, y: 388, w: 258, h: 64, label: "L1 printers ×2", sub: "Scan ISL · set IBL roll" },
+      "print-l4": { x: 430, y: 388, w: 258, h: 64, label: "L4 printers ×2", sub: "Scan ISL · set IBL roll" },
+      "opf-c": { x: 40, y: 520, w: 310, h: 72, label: "1-piece flow · compliant", sub: "Apply 1PF IBL · induct carton" },
+      "opf-nc": { x: 370, y: 520, w: 310, h: 72, label: "1-piece flow · non-compliant", sub: "Apply IBL · get picl · apply 1PF" },
+      "inject-1": { x: 80, y: 640, w: 160, h: 72, label: "Injection 1", sub: "North" },
+      "inject-2": { x: 280, y: 640, w: 160, h: 72, label: "Injection 2", sub: "Center" },
+      "inject-3": { x: 480, y: 640, w: 160, h: 72, label: "Injection 3", sub: "South" },
+    };
+
+    const DEMO_PALLETS = [
+      { id: "p1", label: "AVT compliant", family: "AVT", compliant: true, laneId: "lane-avt-c", injectId: "inject-1", needsIblPicl: false, destination: "automated", skipsScan: false },
+      { id: "p2", label: "AVT non-compliant (IBL + picl)", family: "AVT", compliant: false, laneId: "lane-avt-nc", injectId: "inject-2", needsIblPicl: true, destination: "automated", skipsScan: false },
+      { id: "p3", label: "Prep compliant", family: "Prep", compliant: true, laneId: "lane-prep-c", injectId: "inject-2", needsIblPicl: false, destination: "human", skipsScan: false },
+      { id: "p4", label: "Prep non-compliant (IBL + picl)", family: "Prep", compliant: false, laneId: "lane-prep-nc", injectId: "inject-3", needsIblPicl: true, destination: "human", skipsScan: false },
+      { id: "p5", label: "Middle mile (no scan)", family: "Middle mile", compliant: true, laneId: "lane-mm", injectId: "inject-1", needsIblPicl: false, destination: "middle-mile", skipsScan: true },
+    ];
+
+    const PATH_SCAN = ["dock", "desk", "scan", "lane", "label", "opf", "inject", "done"];
+    const PATH_MM = ["dock", "desk", "lane", "inject", "done"];
+    const PATH_LABELS = {
+      idle: "Ready — pick a flow and play",
+      dock: "Unload at inbound dock",
+      desk: "Packslip upload · confirm PO / IR · apply ISL labels",
+      scan: "Run PO / IR in IB dock management tool",
+      lane: "Queue in sort lane",
+      label: "Printers: scan ISL · set IBL roll",
+      opf: "1-piece flow · induct carton",
+      inject: "Release onto injection line",
+      done: "Inducted — path complete",
+    };
+
+    const COLORS = {
+      text: "rgba(228,228,228,0.92)",
+      muted: "rgba(228,228,228,0.55)",
+      faint: "rgba(228,228,228,0.35)",
+      stroke: "rgba(228,228,228,0.12)",
+      strokeStrong: "rgba(228,228,228,0.2)",
+      fill: "rgba(228,228,228,0.07)",
+      fillStrong: "rgba(228,228,228,0.12)",
+      editor: "#181818",
+      accent: "#599ce7",
+    };
+
+    let palletId = "p1";
+    let pathStep = "idle";
+    let selected = "scan";
+    let timers = [];
+
+    function pallet() {
+      return DEMO_PALLETS.find((p) => p.id === palletId) || DEMO_PALLETS[0];
+    }
+    function pathOrder(p) {
+      return p.skipsScan ? PATH_MM : PATH_SCAN;
+    }
+    function printerBank(p) {
+      return p.family === "Prep" ? "print-l4" : "print-l1";
+    }
+    function opfStation(p) {
+      return p.needsIblPicl || !p.compliant ? "opf-nc" : "opf-c";
+    }
+    function centerOf(key) {
+      const z = FLOOR[key];
+      return { x: z.x + z.w / 2, y: z.y + z.h / 2 };
+    }
+    function waypoint(step, p) {
+      if (step === "dock" || step === "idle") return centerOf("door3");
+      if (step === "desk") return centerOf("desk");
+      if (step === "scan") return centerOf("scan");
+      if (step === "lane") return centerOf(p.laneId);
+      if (step === "label") return centerOf(printerBank(p));
+      if (step === "opf") return centerOf(opfStation(p));
+      return centerOf(p.injectId);
+    }
+    function zoneFor(step, p) {
+      if (step === "dock" || step === "idle") return "docks";
+      if (step === "desk") return "desk";
+      if (step === "scan") return "scan";
+      if (step === "lane") return p.laneId;
+      if (step === "label") return printerBank(p);
+      if (step === "opf") return opfStation(p);
+      return p.injectId;
+    }
+    function insight(p, step) {
+      if (step === "idle") {
+        return p.skipsScan
+          ? "Middle mile exception: this flow never runs PO / IR in IB dock management or visits printers / 1PF."
+          : "AVT/Prep: run PO / IR in IB dock management to see the lane; printers + 1PF labeling happen before injection.";
+      }
+      if (step === "scan") {
+        const lane = p.laneId.includes("avt-c") ? "L1" : p.laneId.includes("avt-nc") ? "L2" : p.laneId.includes("prep-c") ? "L3" : "L4";
+        return `IB dock management result → ${p.family}${p.compliant ? " compliant" : " non-compliant"} → queue ${lane}`;
+      }
+      if (step === "label") {
+        const bank = printerBank(p) === "print-l1" ? "L1" : "L4";
+        return `At the ${bank} printer bank (2 printers): scan the ISL on the pallet, then set the IBL roll on the pallet.` +
+          (p.needsIblPicl ? " Non-compliant also needs picl alongside the IBL roll." : " Compliant: IBL roll only (no picl).");
+      }
+      if (step === "opf") {
+        return p.needsIblPicl || !p.compliant
+          ? "Non-compliant 1-piece flow: apply IBL, get picl labels, and apply those on 1-piece flow — then induct the carton."
+          : "Compliant 1-piece flow: apply 1PF IBL and induct the carton.";
+      }
+      if (step === "lane") {
+        if (p.destination === "automated") return "Queued for AVT — never goes to a human. Next: L1 printers for ISL + IBL roll.";
+        if (p.destination === "human") return "Queued for Prep — goes to a human. Next: L4 printers for ISL + IBL roll.";
+        return "Queued middle mile — no IB dock management step and no IBL printer / 1PF stop.";
+      }
+      if (step === "inject") return `1-piece flow labeling done — releasing onto ${p.injectId.replace("inject-", "injection line ")}.`;
+      if (step === "done") return "Path complete. Replay or switch pallet type to compare flows.";
+      if (step === "desk") return "Packslip upload, confirm PO / IR, and apply ISL labels. Next: run PO / IR in IB dock management tool (unless middle mile).";
+      return "Pallet on the dock floor — moving toward packslip.";
+    }
+
+    function esc(s) {
+      return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+    }
+
+    function zoneRect(id, active, onPath, muted) {
+      const z = FLOOR[id];
+      const fill = active ? COLORS.fillStrong : onPath ? COLORS.fill : COLORS.editor;
+      const stroke = active ? COLORS.accent : onPath ? COLORS.strokeStrong : COLORS.stroke;
+      const opacity = muted && !active && !onPath ? 0.35 : 1;
+      const subY = z.sub ? z.h / 2 + 12 : null;
+      const titleY = z.sub ? z.h / 2 - 6 : z.h / 2 + 4;
+      return `
+        <g data-zone="${esc(id)}" style="cursor:pointer;opacity:${opacity}">
+          <rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="8"
+            fill="${fill}" stroke="${stroke}" stroke-width="${active ? 2.5 : 1}" />
+          <text x="${z.x + z.w / 2}" y="${z.y + titleY}" text-anchor="middle"
+            fill="${COLORS.text}" font-size="12" font-weight="600">${esc(z.label)}</text>
+          ${z.sub ? `<text x="${z.x + z.w / 2}" y="${z.y + subY}" text-anchor="middle"
+            fill="${COLORS.faint}" font-size="10">${esc(z.sub)}</text>` : ""}
+        </g>`;
+    }
+
+    function pulseDot(x, y, size, ghost) {
+      return `
+        <g>
+          <circle class="pulse-ring" cx="${x}" cy="${y}" r="${size * 2.2}"
+            fill="${COLORS.accent}" opacity="${ghost ? 0.08 : 0.18}" />
+          <circle class="pulse-core" cx="${x}" cy="${y}" r="${size}"
+            fill="${COLORS.accent}" opacity="${ghost ? 0.35 : 1}" />
+        </g>`;
+    }
+
+    function render() {
+      const p = pallet();
+      const steps = pathOrder(p);
+      const playing = pathStep !== "idle";
+      const navStep = pathStep === "idle" ? "dock" : pathStep === "done" ? "inject" : pathStep;
+      const activeZone = zoneFor(navStep, p);
+      const dot = waypoint(navStep, p);
+
+      const onPath = new Set();
+      if (playing) {
+        ["door1", "door2", "door3", "door4", "door5"].forEach((d) => onPath.add(d));
+        steps.forEach((s) => {
+          if (s === "done") return;
+          const z = zoneFor(s, p);
+          if (z === "docks") onPath.add("door3");
+          else onPath.add(z);
+        });
+        if (!p.skipsScan) {
+          onPath.add("print-l1");
+          onPath.add("print-l4");
+          onPath.add("opf-c");
+          onPath.add("opf-nc");
+        }
+      }
+
+      const line = steps
+        .filter((s) => s !== "done")
+        .map((s) => {
+          const pt = waypoint(s, p);
+          return `${pt.x},${pt.y}`;
+        })
+        .join(" ");
+
+      const trail = [];
+      if (playing) {
+        const idx = steps.indexOf(pathStep === "done" ? "inject" : pathStep);
+        for (let i = 0; i <= Math.max(0, idx); i++) {
+          if (steps[i] !== "done") trail.push(waypoint(steps[i], p));
+        }
+      }
+
+      const doors = ["door1", "door2", "door3", "door4", "door5"]
+        .map((id) => zoneRect(id, activeZone === "docks" || selected === "docks", onPath.has(id), playing))
+        .join("");
+
+      const lanes = ["lane-avt-c", "lane-avt-nc", "lane-prep-c", "lane-prep-nc", "lane-mm"]
+        .map((id) => zoneRect(id, activeZone === id || selected === id, onPath.has(id), playing))
+        .join("");
+
+      const printers = ["print-l1", "print-l4"].map((id) => {
+        const z = FLOOR[id];
+        const active = activeZone === id || selected === id || (pathStep === "label" && printerBank(p) === id);
+        return `
+          ${zoneRect(id, active, onPath.has(id), playing || p.skipsScan)}
+          <rect x="${z.x + 14}" y="${z.y + 38}" width="40" height="16" rx="3"
+            fill="${COLORS.fillStrong}" opacity="${p.skipsScan ? 0.25 : 0.55}" />
+          <rect x="${z.x + 62}" y="${z.y + 38}" width="40" height="16" rx="3"
+            fill="${COLORS.fillStrong}" opacity="${p.skipsScan ? 0.25 : 0.55}" />
+        `;
+      }).join("");
+
+      const opfs = ["opf-c", "opf-nc"].map((id) => {
+        const active = activeZone === id || selected === id || (pathStep === "opf" && opfStation(p) === id);
+        return zoneRect(id, active, onPath.has(id), playing || p.skipsScan);
+      }).join("");
+
+      const injects = ["inject-1", "inject-2", "inject-3"]
+        .map((id) => zoneRect(id, activeZone === id || selected === id, onPath.has(id), playing))
+        .join("");
+
+      document.getElementById("svgHost").innerHTML = `
+        <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Warehouse floor overview">
+          <rect x="16" y="16" width="${W - 32}" height="${H - 32}" rx="14"
+            fill="rgba(228,228,228,0.04)" stroke="${COLORS.stroke}" />
+          <rect x="40" y="96" width="640" height="28" rx="4" fill="${COLORS.fill}" opacity="0.7" />
+          <text x="360" y="114" text-anchor="middle" fill="${COLORS.faint}" font-size="10">dock aisle</text>
+          <rect x="40" y="470" width="640" height="28" rx="4" fill="${COLORS.fill}" opacity="0.7" />
+          <text x="360" y="488" text-anchor="middle" fill="${COLORS.faint}" font-size="10">induction aisle</text>
+          <text x="36" y="24" fill="${COLORS.faint}" font-size="10">NORTH · inbound doors</text>
+          <text x="36" y="${H - 20}" fill="${COLORS.faint}" font-size="10">SOUTH · into processing</text>
+          <polyline points="${line}" fill="none" stroke="${COLORS.accent}"
+            stroke-width="${playing ? 3 : 1.5}" opacity="${playing ? 0.85 : 0.25}"
+            stroke-linejoin="round" stroke-linecap="round"
+            class="${playing ? "flow-dash" : ""}" />
+          ${doors}
+          ${zoneRect("desk", activeZone === "desk" || selected === "desk", onPath.has("desk"), playing)}
+          ${zoneRect(
+            "scan",
+            !p.skipsScan && (activeZone === "scan" || selected === "scan" || pathStep === "scan"),
+            onPath.has("scan"),
+            playing || p.skipsScan
+          )}
+          ${lanes}
+          ${printers}
+          ${opfs}
+          ${injects}
+          ${p.skipsScan ? `
+            <rect x="448" y="218" width="184" height="22" rx="4" fill="${COLORS.fillStrong}" stroke="${COLORS.strokeStrong}" />
+            <text x="540" y="233" text-anchor="middle" fill="${COLORS.muted}" font-size="10">MM bypasses IB dock mgmt</text>
+          ` : ""}
+          ${trail.map((pt) => pulseDot(pt.x, pt.y, 5, true)).join("")}
+          ${pulseDot(dot.x, dot.y, pathStep === "idle" ? 7 : 10, false)}
+        </svg>
+      `;
+
+      document.querySelectorAll("[data-zone]").forEach((g) => {
+        g.addEventListener("click", () => {
+          const id = g.getAttribute("data-zone");
+          if (id.startsWith("door")) selected = "docks";
+          else selected = id;
+          render();
+        });
+      });
+
+      const stepIndex = pathStep === "idle" ? -1 : steps.indexOf(pathStep);
+      document.getElementById("insightTitle").textContent = PATH_LABELS[pathStep];
+      document.getElementById("insightBody").textContent = insight(p, pathStep);
+      document.getElementById("steps").innerHTML = steps.map((step, i) => {
+        const current = pathStep === step;
+        const done = pathStep !== "idle" && stepIndex > i;
+        return `<div class="step ${current ? "current" : ""} ${done ? "done" : ""}">
+          <span class="dot"></span>
+          <span>${i + 1}. ${esc(PATH_LABELS[step])}</span>
+        </div>`;
+      }).join("");
+
+      const callout = document.getElementById("callout");
+      if (p.skipsScan) {
+        callout.innerHTML = `<strong>Middle mile exception</strong>Watch the dot skip IB dock management, printers, and 1-piece flow: dock → packslip → Lane 5 → injection.`;
+      } else if (p.needsIblPicl) {
+        callout.innerHTML = `<strong>Non-compliant path</strong>After printers, the pulse hits 1-piece flow — apply IBL, get picl labels, apply those on 1PF, then induct and inject.`;
+      } else {
+        callout.innerHTML = `<strong>Compliant path</strong>After printers, the pulse hits 1-piece flow — apply 1PF IBL, induct the carton, then inject.`;
+      }
+
+      const pills = [];
+      if (p.skipsScan) pills.push('<span class="pill warn">No scan · middle mile</span>');
+      else if (p.needsIblPicl) pills.push('<span class="pill warn">IBL + picl</span>');
+      else pills.push('<span class="pill info">IBL only</span>');
+      if (p.destination === "automated") pills.push('<span class="pill info">No human</span>');
+      else if (p.destination === "human") pills.push('<span class="pill warn">To human</span>');
+      else pills.push('<span class="pill">Middle mile</span>');
+      document.getElementById("pills").innerHTML = pills.join(" ");
+    }
+
+    function clearTimers() {
+      timers.forEach((t) => clearTimeout(t));
+      timers = [];
+    }
+
+    function play() {
+      clearTimers();
+      const p = pallet();
+      const order = pathOrder(p);
+      pathStep = "dock";
+      selected = "docks";
+      render();
+      order.forEach((step, i) => {
+        timers.push(setTimeout(() => {
+          pathStep = step;
+          selected = zoneFor(step === "done" ? "inject" : step, p);
+          render();
+        }, i * 1100));
+      });
+    }
+
+    function reset() {
+      clearTimers();
+      pathStep = "idle";
+      selected = pallet().skipsScan ? "lane-mm" : "scan";
+      render();
+    }
+
+    const select = document.getElementById("palletSelect");
+    DEMO_PALLETS.forEach((p) => {
+      const opt = document.createElement("option");
+      opt.value = p.id;
+      opt.textContent = p.label;
+      select.appendChild(opt);
+    });
+    select.value = palletId;
+    select.addEventListener("change", () => {
+      palletId = select.value;
+      reset();
+    });
+    document.getElementById("playBtn").addEventListener("click", play);
+    document.getElementById("resetBtn").addEventListener("click", reset);
+    render();
+  </script>
+</body>
+</html>
